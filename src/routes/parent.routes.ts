@@ -8,8 +8,8 @@ router.use(authMiddleware);
 
 router.post('/', ParentController.create);
 router.get('/', ParentController.getAll);
-router.get('/:id', ParentController.getById);
 router.get('/user/:userId', ParentController.getByUserId);
+router.get('/:id', ParentController.getById);
 router.put('/:id', ParentController.update);
 
 // Children

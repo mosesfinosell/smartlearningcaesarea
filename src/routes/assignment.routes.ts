@@ -8,8 +8,8 @@ router.use(authMiddleware);
 
 router.post('/', AssignmentController.create);
 router.get('/', AssignmentController.getAll);
-router.get('/:id', AssignmentController.getById);
 router.get('/student/:studentId', AssignmentController.getStudentSubmissions);
+router.get('/:id', AssignmentController.getById);
 
 // Submissions
 router.post('/:id/submit', AssignmentController.submit);

@@ -21,7 +21,7 @@ export class StudentController {
       // Add student to parent's children list
       const parent = await Parent.findById(parentId);
       if (parent) {
-        await parent.addChild(student._id, 'child');
+        await parent.addChild(student._id, 'other');
       }
 
       res.status(201).json({

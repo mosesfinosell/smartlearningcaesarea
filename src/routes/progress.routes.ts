@@ -8,8 +8,8 @@ router.use(authMiddleware);
 
 router.post('/', ProgressReportController.create);
 router.get('/', ProgressReportController.getAll);
-router.get('/:id', ProgressReportController.getById);
 router.get('/student/:studentId', ProgressReportController.getByStudent);
+router.get('/:id', ProgressReportController.getById);
 router.post('/:id/send', ProgressReportController.sendToParent);
 router.post('/:id/acknowledge', ProgressReportController.acknowledgeReport);
 

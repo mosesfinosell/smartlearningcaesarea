@@ -8,9 +8,9 @@ router.use(authMiddleware);
 
 router.post('/', StudentController.create);
 router.get('/', StudentController.getAll);
-router.get('/:id', StudentController.getById);
 router.get('/user/:userId', StudentController.getByUserId);
 router.get('/parent/:parentId', StudentController.getByParent);
+router.get('/:id', StudentController.getById);
 router.put('/:id', StudentController.update);
 
 // Enrollment

@@ -10,6 +10,8 @@ router.use(authMiddleware);
 // Class CRUD
 router.post('/', ClassController.create);
 router.get('/', ClassController.getAll);
+router.get('/student/:studentId', ClassController.getStudentClasses);
+router.get('/tutor/:tutorId', ClassController.getTutorClasses);
 router.get('/:id', ClassController.getById);
 router.put('/:id', ClassController.update);
 
@@ -20,9 +22,5 @@ router.post('/:id/enroll', ClassController.enrollStudent);
 router.post('/:id/sessions', ClassController.addSession);
 router.put('/:id/sessions/:sessionId', ClassController.updateSession);
 router.post('/:id/sessions/:sessionId/attendance', ClassController.markAttendance);
-
-// Get by user
-router.get('/student/:studentId', ClassController.getStudentClasses);
-router.get('/tutor/:tutorId', ClassController.getTutorClasses);
 
 export default router;
