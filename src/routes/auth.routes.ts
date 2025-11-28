@@ -24,8 +24,8 @@ router.post(
       .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
       .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
     body('role')
-      .isIn(['parent', 'student', 'tutor'])
-      .withMessage('Role must be either parent, student, or tutor'),
+      .isIn(['parent', 'student', 'tutor', 'admin'])
+      .withMessage('Role must be parent, student, tutor, or admin'),
     body('profile.firstName')
       .custom((value, { req }) => {
         return (value && value.trim().length > 0) || (req.body.firstName && req.body.firstName.trim().length > 0);
