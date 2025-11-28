@@ -15,6 +15,8 @@ import paymentRoutes from './routes/payment.routes';
 import messageRoutes from './routes/message.routes';
 import progressRoutes from './routes/progress.routes';
 import notificationRoutes from './routes/notification.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import { seedTutorsOnBoot } from './seed/tutor.seed';
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +26,7 @@ const app: Application = express();
 
 // Connect to database
 connectDB();
+seedTutorsOnBoot().catch((err: unknown) => console.error('[SEED] Tutor seed failed:', err));
 
 // Security middleware
 app.use(helmet());
@@ -83,6 +86,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/progress-reports', progressRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Welcome route
 app.get('/', (req: Request, res: Response) => {
