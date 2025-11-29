@@ -3,8 +3,11 @@ import bcrypt from 'bcrypt';
 
 export interface IUser extends Document {
   email: string;
-  password: string;
+  password?: string;
   role: 'parent' | 'student' | 'tutor' | 'admin' | 'coordinator';
+  provider?: 'local' | 'google' | 'facebook' | 'apple';
+  providerId?: string;
+  profileComplete?: boolean;
   refreshToken?: string;
   profile: {
     firstName: string;
@@ -49,14 +52,32 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [8, 'Password must be at least 8 characters long'],
+      required: function () {
+        return !this.provider || this.provider === 'local';
+      },
+      minlength: [
+        8,
+        'Password must be at least 8 characters long',
+      ],
       select: false, // Don't include password in queries by default
     },
     role: {
       type: String,
       enum: ['parent', 'student', 'tutor', 'admin', 'coordinator'],
       required: [true, 'Role is required'],
+    },
+    provider: {
+      type: String,
+      enum: ['local', 'google', 'facebook', 'apple'],
+      default: 'local',
+    },
+    providerId: {
+      type: String,
+      trim: true,
+    },
+    profileComplete: {
+      type: Boolean,
+      default: true,
     },
     refreshToken: String,
     profile: {
@@ -134,8 +155,8 @@ userSchema.index({ status: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
-  // Only hash password if it has been modified
-  if (!this.isModified('password')) {
+  // Only hash password if it exists and has been modified
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
 

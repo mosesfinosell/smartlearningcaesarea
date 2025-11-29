@@ -81,6 +81,29 @@ router.post(
 );
 
 /**
+ * @route   POST /api/auth/oauth
+ * @desc    OAuth login/signup (Google, Facebook, Apple)
+ * @access  Public
+ */
+router.post(
+  '/oauth',
+  [
+    body('provider')
+      .isIn(['google', 'facebook', 'apple'])
+      .withMessage('Provider must be google, facebook, or apple'),
+    body('token')
+      .notEmpty()
+      .withMessage('OAuth token is required'),
+    body('role')
+      .optional()
+      .isIn(['parent', 'student', 'tutor', 'admin'])
+      .withMessage('Role must be parent, student, tutor, or admin'),
+  ],
+  validateRequest,
+  authController.oauthLogin
+);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Get current user profile
  * @access  Private

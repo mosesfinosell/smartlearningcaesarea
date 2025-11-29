@@ -6,6 +6,7 @@ import Parent from '../models/Parent';
 import Tutor from '../models/Tutor';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { generateTokens, verifyRefreshToken } from '../utils/jwt.util';
+import { OAuthProvider, verifyProviderToken } from '../utils/oauth.util';
 
 type RoleProfileOptions = {
   parentId?: string;
@@ -292,6 +293,130 @@ export const login = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * OAuth login/signup
+ * POST /api/auth/oauth
+ */
+export const oauthLogin = async (req: AuthRequest, res: Response) => {
+  try {
+    const { provider, token, role, profile } = req.body;
+
+    if (!provider || !token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider and token are required',
+      });
+    }
+
+    const normalizedProvider = (provider as string).toLowerCase() as OAuthProvider;
+    const providerProfile = await verifyProviderToken(normalizedProvider, token);
+
+    if (!providerProfile.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'No email returned from provider',
+      });
+    }
+
+    const normalizedEmail = providerProfile.email.toLowerCase();
+    let user = await User.findOne({ email: normalizedEmail }).select('+password');
+
+    const incomingProfile = profile && typeof profile === 'object' ? profile : {};
+    const normalizedProfile = {
+      firstName: (incomingProfile.firstName || providerProfile.firstName || '').trim(),
+      lastName: (incomingProfile.lastName || providerProfile.lastName || '').trim(),
+      phoneNumber: incomingProfile.phoneNumber || '',
+      profilePicture: incomingProfile.profilePicture || '',
+    };
+
+    const isProfileComplete =
+      Boolean(normalizedProfile.firstName) &&
+      Boolean(normalizedProfile.lastName) &&
+      Boolean(normalizedProfile.phoneNumber);
+
+    if (!user) {
+      if (!role) {
+        return res.status(400).json({
+          success: false,
+          message: 'Role is required for new OAuth registrations',
+        });
+      }
+
+      user = await User.create({
+        email: normalizedEmail,
+        role,
+        provider: normalizedProvider,
+        providerId: providerProfile.providerId,
+        profile: normalizedProfile,
+        status: 'active',
+        profileComplete: isProfileComplete,
+        verification: {
+          emailVerified: providerProfile.emailVerified ?? false,
+          phoneVerified: false,
+          identityVerified: false,
+        },
+      });
+    } else {
+      user.provider = user.provider || normalizedProvider;
+      user.providerId = user.providerId || providerProfile.providerId;
+      user.profile.firstName = user.profile.firstName || normalizedProfile.firstName;
+      user.profile.lastName = user.profile.lastName || normalizedProfile.lastName;
+      user.profile.phoneNumber = user.profile.phoneNumber || normalizedProfile.phoneNumber;
+      user.profile.profilePicture = user.profile.profilePicture || normalizedProfile.profilePicture;
+
+      if (typeof providerProfile.emailVerified !== 'undefined') {
+        user.verification.emailVerified = providerProfile.emailVerified;
+      }
+
+      if (!user.profileComplete && isProfileComplete) {
+        user.profileComplete = true;
+      }
+
+      await user.save();
+    }
+
+    user.lastLogin = new Date();
+
+    const { accessToken, refreshToken } = generateTokens({
+      userId: user._id.toString(),
+      role: user.role,
+      email: user.email,
+    });
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    const roleProfile = await getOrCreateRoleProfile(user, { context: 'login' });
+
+    res.json({
+      success: true,
+      message: 'OAuth login successful',
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          role: user.role,
+          profile: user.profile,
+          status: user.status,
+          verification: user.verification,
+          profileComplete: user.profileComplete,
+          provider: user.provider,
+        },
+        roleProfile,
+        accessToken,
+        refreshToken,
+        profileComplete: user.profileComplete,
+      },
+    });
+  } catch (error: any) {
+    console.error('OAuth login error:', error.response?.data || error.message || error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error with OAuth login',
+    });
+  }
+};
+
+/**
  * Get current user profile
  * GET /api/auth/me
  */
@@ -333,11 +458,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const { profile } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      req.user?.userId,
-      { profile },
-      { new: true, runValidators: true }
-    ).select('-password -refreshToken');
+    const user = await User.findById(req.user?.userId).select('-password -refreshToken');
 
     if (!user) {
       return res.status(404).json({
@@ -345,6 +466,24 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         message: 'User not found',
       });
     }
+
+    if (profile && typeof profile === 'object') {
+      user.profile = {
+        ...user.profile,
+        ...profile,
+      };
+
+      const hasRequiredProfile =
+        Boolean(user.profile?.firstName) &&
+        Boolean(user.profile?.lastName) &&
+        Boolean(user.profile?.phoneNumber);
+
+      if (hasRequiredProfile) {
+        user.profileComplete = true;
+      }
+    }
+
+    await user.save();
 
     res.status(200).json({
       success: true,
