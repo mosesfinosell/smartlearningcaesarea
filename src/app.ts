@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 import { connectDB } from './config/database';
 import authRoutes from './routes/auth.routes';
 import subjectRoutes from './routes/subject.routes';
@@ -44,6 +45,9 @@ app.use(
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Rate limiting
 const limiter = rateLimit({

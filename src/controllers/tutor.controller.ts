@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import Tutor, { ITutor } from '../models/Tutor';
+import User from '../models/User';
 
 export class TutorController {
   // Create tutor profile
@@ -18,6 +19,55 @@ export class TutorController {
       res.status(500).json({
         success: false,
         message: 'Failed to create tutor profile',
+        error: error.message,
+      });
+    }
+  }
+
+  // Upload/display picture for tutor (passport-style)
+  static async uploadPhoto(req: AuthRequest, res: Response) {
+    try {
+      const tutor = await Tutor.findById(req.params.id);
+
+      if (!tutor) {
+        return res.status(404).json({
+          success: false,
+          message: 'Tutor not found',
+        });
+      }
+
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No file uploaded',
+        });
+      }
+
+      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/tutors/${file.filename}`;
+
+      tutor.photoUrl = fileUrl;
+      await tutor.save();
+
+      // Sync with linked user profile picture when available
+      if (tutor.userId) {
+        const user = await User.findById(tutor.userId);
+        if (user) {
+          user.profile.profilePicture = fileUrl;
+          await user.save();
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Tutor photo uploaded successfully',
+        data: { photoUrl: fileUrl },
+      });
+    } catch (error: any) {
+      console.error('Photo upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload tutor photo',
         error: error.message,
       });
     }

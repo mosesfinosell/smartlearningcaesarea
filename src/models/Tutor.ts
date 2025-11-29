@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ITutor extends Document {
   userId: mongoose.Types.ObjectId;
   tutorCode: string;
+  photoUrl?: string;
   qualifications: {
     degree: string;
     institution: string;
@@ -180,6 +181,7 @@ const tutorSchema = new Schema<ITutor>(
       type: String,
       unique: true,
     },
+    photoUrl: String,
     qualifications: [
       {
         degree: String,
